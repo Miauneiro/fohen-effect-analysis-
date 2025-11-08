@@ -1,0 +1,70 @@
+Analytical Methodology
+
+1. Objective
+This document details the thermodynamic methodology used to analyze and visualize the Föhn effect on Madeira Island. The Föhn effect is a meteorological phenomenon characterized by the adiabatic warming and drying of air as it descends on the leeward side of a mountain range.
+
+This analysis models the complete thermodynamic path of an air parcel as it is forced over the island's central mountains, from the windward (North) coast to the leeward (South) coast. The analysis is performed using the MetPy library to plot this path on a Skew-T Log-P diagram.
+
+2. Data Source
+The analysis is based on a set of representative observational data points, stored in data/madeira_observations.json, which define the thermodynamic state of an air parcel at key locations:
+
+Initial State (Windward - North Coast):
+
+Pressure: 1000 hPa
+
+Temperature: 20°C
+
+Dewpoint: 10.5°C
+
+Mixing Ratio: 8.0 g/kg
+
+Key Path Points:
+
+Lifting Condensation Level (LCL), Ascent: 870 hPa, 8.4°C
+
+Mountain Summit: 400 hPa, -32°C
+
+LCL, Descent (Leeward Cloud Base): 655 hPa, -4.5°C
+
+Final State (Leeward - Funchal):
+
+Pressure: 1000 hPa
+
+Temperature: 30°C
+
+Dewpoint: 1.4°C
+
+Mixing Ratio: 4.2 g/kg
+
+3. Core Thermodynamic Principles
+The analysis is governed by the following principles of atmospheric thermodynamics:
+
+Dry Adiabatic Lapse Rate (DALR): The rate at which an unsaturated (dry) parcel of air cools upon ascent or warms upon descent (~9.8°C/km). This process conserves potential temperature.
+
+Lifting Condensation Level (LCL): The pressure level at which a rising parcel cools to its dewpoint temperature, achieves saturation (RH=100%), and begins cloud formation.
+
+Moist (Saturated) Adiabatic Lapse Rate (SALR): The rate at which a saturated parcel of air cools upon ascent. This rate is less than the DALR because the latent heat of condensation is released, partially offsetting the adiabatic cooling.
+
+Mixing Ratio (r): The mass of water vapor per mass of dry air (g/kg). This value remains constant during a dry adiabatic process but decreases during a moist adiabatic ascent as water vapor condenses and precipitates.
+
+4. Analytical Steps
+The code models the air parcel's journey in a step-by-step process, plotting each leg on the Skew-T diagram:
+
+Initialization: The Skew-T Log-P diagram is generated. The initial state of the air parcel on the windward (North) coast (T=20°C, Td=10.5°C) is plotted at 1000 hPa.
+
+Dry Ascent to LCL: The path from the surface (1000 hPa) to the LCL (870 hPa) is plotted. The air parcel follows the Dry Adiabatic Lapse Rate (DALR), and its moisture content is constant, following the 8 g/kg mixing ratio line.
+
+Moist Ascent (Orographic Precipitation): From the LCL (870 hPa) to the mountain summit (400 hPa), the parcel is saturated. It follows the Moist Adiabatic Lapse Rate (SALR). During this phase, moisture condenses and is precipitated, causing the parcel's mixing ratio to decrease.
+
+Moist Descent (Cloud Evaporation): The parcel begins its descent from the summit, initially still saturated. It warms at the SALR as it descends, evaporating any remaining cloud water until it reaches the leeward cloud base (LCL on descent) at 655 hPa.
+
+Dry Descent (Föhn Warming): From the leeward LCL (655 hPa) to the leeward surface (1000 hPa), the parcel is now unsaturated (dry). It warms rapidly at the DALR. Its mixing ratio remains constant at its new, lower value of 4.2 g/kg.
+
+Final State Analysis: The parcel arrives at the leeward surface (Funchal), resulting in the final observed conditions (T=30°C, Td=1.4°C). The relative humidity is calculated from these final values, confirming the extremely dry nature of the Föhn-affected air.
+
+5. Tools and Visualization
+MetPy: This library is the core of the analysis. It is used for all thermodynamic calculations (e.g., mpcalc.dry_lapse, mpcalc.moist_lapse, mpcalc.relative_humidity_from_dewpoint) and for generating the SkewT plot object.
+
+Matplotlib: This is the underlying plotting engine used by MetPy to render the Skew-T diagram, all reference lines (adiabats, mixing lines), and the plotted data paths.
+
+NumPy: This library is used to generate the pressure arrays (np.linspace) required for plotting the continuous adiabatic paths.
