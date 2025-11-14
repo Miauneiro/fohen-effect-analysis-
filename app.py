@@ -156,137 +156,143 @@ if summit_pressure >= north_pressure:
     st.sidebar.error("WARNING: Summit pressure must be less than surface pressure")
     st.stop()
 
-# Main content area
-col1, col2 = st.columns([2, 1])
+# ============================================
+# MAIN DIAGRAM - FULL WIDTH
+# ============================================
+st.subheader("Skew-T Log-P Diagram")
+
+# Create analyzer with wider figure for full-width display
+analyzer = FoehnEffectAnalyzer(fig_size=(16, 16))
+analyzer.configure_diagram(
+    p_min=summit_pressure - 50,
+    p_max=north_pressure + 20,
+    t_min=-40,
+    t_max=45
+)
+
+# Set conditions
+analyzer.set_initial_conditions(
+    north_pressure, north_temp, north_dewpoint, north_mixing_ratio
+)
+
+# Calculate LCL (Lifting Condensation Level)
+lcl_pressure, lcl_temp = mpcalc.lcl(
+    north_pressure * units.hPa,
+    north_temp * units.degC,
+    north_dewpoint * units.degC
+)
+
+# Calculate summit temperature (moist adiabatic from LCL)
+pressures_ascent = np.linspace(lcl_pressure.m, summit_pressure, 50) * units.hPa
+summit_temp_calc = mpcalc.moist_lapse(
+    pressures_ascent, lcl_temp, lcl_pressure
+)[-1]
+
+# Calculate new mixing ratio at summit (assume 50% moisture loss)
+summit_mixing_ratio = north_mixing_ratio * 0.5
+
+# Calculate leeward LCL (where parcel becomes unsaturated on descent)
+# Approximate as midpoint between summit and surface
+lcl_descent_pressure = (summit_pressure + south_pressure) / 2
+pressures_descent_moist = np.linspace(summit_pressure, lcl_descent_pressure, 50) * units.hPa
+lcl_descent_temp = mpcalc.moist_lapse(
+    pressures_descent_moist, summit_temp_calc, summit_pressure * units.hPa
+)[-1]
+
+# Calculate final temperature (dry adiabatic from leeward LCL)
+pressures_descent_dry = np.linspace(lcl_descent_pressure, south_pressure, 50) * units.hPa
+south_temp_calc = mpcalc.dry_lapse(
+    pressures_descent_dry, lcl_descent_temp
+)[-1]
+
+# Calculate final dewpoint from mixing ratio
+south_dewpoint_calc = mpcalc.dewpoint_from_specific_humidity(
+    south_pressure * units.hPa,
+    south_temp_calc,
+    mpcalc.specific_humidity_from_mixing_ratio(summit_mixing_ratio * units('g/kg'))
+)
+
+# Plot points
+analyzer.plot_observation_point(
+    north_pressure * units.hPa,
+    north_temp * units.degC,
+    'orange',
+    'Windward Surface'
+)
+
+analyzer.plot_observation_point(
+    lcl_pressure,
+    lcl_temp,
+    'cyan',
+    'LCL (Cloud Base)'
+)
+
+analyzer.plot_observation_point(
+    summit_pressure * units.hPa,
+    summit_temp_calc,
+    'red',
+    'Summit'
+)
+
+analyzer.plot_observation_point(
+    south_pressure * units.hPa,
+    south_temp_calc,
+    'orange',
+    'Leeward Surface (Föhn)'
+)
+
+# Plot processes
+analyzer.plot_adiabatic_process(
+    north_pressure, lcl_pressure.m,
+    north_temp * units.degC,
+    process_type='dry',
+    color='blue',
+    label='Dry Ascent'
+)
+
+analyzer.plot_adiabatic_process(
+    lcl_pressure.m, summit_pressure,
+    lcl_temp,
+    process_type='moist',
+    color='green',
+    label='Moist Ascent (Precipitation)'
+)
+
+analyzer.plot_adiabatic_process(
+    summit_pressure, lcl_descent_pressure,
+    summit_temp_calc,
+    process_type='moist',
+    color='green',
+    linestyle='--',
+    label='Moist Descent'
+)
+
+analyzer.plot_adiabatic_process(
+    lcl_descent_pressure, south_pressure,
+    lcl_descent_temp,
+    process_type='dry',
+    color='red',
+    linestyle='-',
+    label='Dry Descent (Föhn)'
+)
+
+# Finalize
+analyzer.finalize_plot(
+    'Föhn Effect Analysis',
+    legend_loc='upper left'
+)
+
+# Display plot in Streamlit - full width
+st.pyplot(analyzer.fig)
+
+# ============================================
+# RESULTS SECTION - TWO COLUMNS BELOW
+# ============================================
+st.divider()
+
+col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Skew-T Log-P Diagram")
-    
-    # Create analyzer
-    analyzer = FoehnEffectAnalyzer(fig_size=(10, 8))
-    analyzer.configure_diagram(
-        p_min=summit_pressure - 50,
-        p_max=north_pressure + 20,
-        t_min=-40,
-        t_max=45
-    )
-    
-    # Set conditions
-    analyzer.set_initial_conditions(
-        north_pressure, north_temp, north_dewpoint, north_mixing_ratio
-    )
-    
-    # Calculate LCL (Lifting Condensation Level)
-    lcl_pressure, lcl_temp = mpcalc.lcl(
-        north_pressure * units.hPa,
-        north_temp * units.degC,
-        north_dewpoint * units.degC
-    )
-    
-    # Calculate summit temperature (moist adiabatic from LCL)
-    pressures_ascent = np.linspace(lcl_pressure.m, summit_pressure, 50) * units.hPa
-    summit_temp_calc = mpcalc.moist_lapse(
-        pressures_ascent, lcl_temp, lcl_pressure
-    )[-1]
-    
-    # Calculate new mixing ratio at summit (assume 50% moisture loss)
-    summit_mixing_ratio = north_mixing_ratio * 0.5
-    
-    # Calculate leeward LCL (where parcel becomes unsaturated on descent)
-    # Approximate as midpoint between summit and surface
-    lcl_descent_pressure = (summit_pressure + south_pressure) / 2
-    pressures_descent_moist = np.linspace(summit_pressure, lcl_descent_pressure, 50) * units.hPa
-    lcl_descent_temp = mpcalc.moist_lapse(
-        pressures_descent_moist, summit_temp_calc, summit_pressure * units.hPa
-    )[-1]
-    
-    # Calculate final temperature (dry adiabatic from leeward LCL)
-    pressures_descent_dry = np.linspace(lcl_descent_pressure, south_pressure, 50) * units.hPa
-    south_temp_calc = mpcalc.dry_lapse(
-        pressures_descent_dry, lcl_descent_temp
-    )[-1]
-    
-    # Calculate final dewpoint from mixing ratio
-    south_dewpoint_calc = mpcalc.dewpoint_from_specific_humidity(
-        south_pressure * units.hPa,
-        south_temp_calc,
-        mpcalc.specific_humidity_from_mixing_ratio(summit_mixing_ratio * units('g/kg'))
-    )
-    
-    # Plot points
-    analyzer.plot_observation_point(
-        north_pressure * units.hPa,
-        north_temp * units.degC,
-        'orange',
-        'Windward Surface'
-    )
-    
-    analyzer.plot_observation_point(
-        lcl_pressure,
-        lcl_temp,
-        'cyan',
-        'LCL (Cloud Base)'
-    )
-    
-    analyzer.plot_observation_point(
-        summit_pressure * units.hPa,
-        summit_temp_calc,
-        'red',
-        'Summit'
-    )
-    
-    analyzer.plot_observation_point(
-        south_pressure * units.hPa,
-        south_temp_calc,
-        'orange',
-        'Leeward Surface (Föhn)'
-    )
-    
-    # Plot processes
-    analyzer.plot_adiabatic_process(
-        north_pressure, lcl_pressure.m,
-        north_temp * units.degC,
-        process_type='dry',
-        color='blue',
-        label='Dry Ascent'
-    )
-    
-    analyzer.plot_adiabatic_process(
-        lcl_pressure.m, summit_pressure,
-        lcl_temp,
-        process_type='moist',
-        color='green',
-        label='Moist Ascent (Precipitation)'
-    )
-    
-    analyzer.plot_adiabatic_process(
-        summit_pressure, lcl_descent_pressure,
-        summit_temp_calc,
-        process_type='moist',
-        color='green',
-        linestyle='--',
-        label='Moist Descent'
-    )
-    
-    analyzer.plot_adiabatic_process(
-        lcl_descent_pressure, south_pressure,
-        lcl_descent_temp,
-        process_type='dry',
-        color='red',
-        linestyle='-',
-        label='Dry Descent (Föhn)'
-    )
-    
-    # Finalize
-    analyzer.finalize_plot(
-        'Föhn Effect Analysis',
-        legend_loc='upper left'
-    )
-    
-    # Display plot in Streamlit
-    st.pyplot(analyzer.fig)
-
-with col2:
     st.subheader("Analysis Results")
     
     # Calculate metrics
@@ -325,8 +331,8 @@ with col2:
         delta=f"{(moisture_loss/north_mixing_ratio)*100:.0f}% lost",
         delta_color="off"
     )
-    
-    # Detailed results table
+
+with col2:
     st.subheader("Detailed Analysis")
     
     results_data = {
@@ -372,7 +378,9 @@ with col2:
     else:
         st.info("Normal humidity levels")
 
-# Download section
+# ============================================
+# EXPORT SECTION
+# ============================================
 st.divider()
 st.subheader("Export Results")
 
