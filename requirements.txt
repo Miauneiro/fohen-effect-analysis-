@@ -2,3 +2,6 @@ metpy
 matplotlib
 numpy
 jupyter
+"" 
+"# Interactive Dashboard" 
+"streamlit>=1.28.0" 
